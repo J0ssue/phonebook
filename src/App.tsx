@@ -1,8 +1,9 @@
-import { useState, ChangeEvent, FormEvent, useMemo } from 'react';
-import Person from './components/Person';
+import { useState, ChangeEvent, FormEvent, useMemo, useEffect } from 'react';
 import Filter from './components/Filter';
 import PersonForm from './components/PersonForm';
 import Persons from './components/Persons';
+import personsApi from './persons.api';
+import { AxiosError } from 'axios';
 
 export interface TPerson {
   name: string;
@@ -11,15 +12,16 @@ export interface TPerson {
 }
 
 const App = () => {
-  const [persons, setPersons] = useState<TPerson[]>([
-    { name: 'Arto Hellas', number: '040-123456', id: 1 },
-    { name: 'Ada Lovelace', number: '39-44-5323523', id: 2 },
-    { name: 'Dan Abramov', number: '12-43-234345', id: 3 },
-    { name: 'Mary Poppendieck', number: '39-23-6423122', id: 4 },
-  ]);
+  const [persons, setPersons] = useState<TPerson[]>([]);
   const [newName, setNewName] = useState('');
   const [newNumber, setNewNumber] = useState('');
   const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    personsApi.getAll().then((personsData) => {
+      setPersons(personsData);
+    });
+  }, []);
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -28,7 +30,6 @@ const App = () => {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('here');
     const newPerson = {
       name: newName,
       number: newNumber,
@@ -39,13 +40,47 @@ const App = () => {
     }
 
     if (persons.find((p) => p.name === newName)) {
-      alert(`${newName} is already added to phonebook`);
+      const person = persons.find((p) => p.name === newName);
+      const confirm = window.confirm(
+        `${newName} is already added to phonebook, Would you like to replace it?`
+      );
+      if (confirm) {
+        const updatedPerson = {
+          name: newName,
+          number: newNumber,
+        };
+
+        personsApi.update(person?.id as number, updatedPerson).then((p) => {
+          setPersons(
+            persons.map((p) => (p.id === person?.id ? updatedPerson : p))
+          );
+        });
+      }
       return;
     }
 
-    setPersons(persons.concat(newPerson));
-    setNewName('');
-    setNewNumber('');
+    personsApi.create(newPerson).then((responseData) => {
+      setPersons(persons.concat(responseData));
+      setNewName('');
+      setNewNumber('');
+    });
+  };
+
+  const handleDelete = (id: number) => {
+    const confirm = window.confirm(
+      `Are you sure you want to delete user with id ${id}?`
+    );
+    if (confirm) {
+      personsApi
+        .destroy(id)
+        .then((res) => {
+          setPersons(persons.filter((p) => p.id !== res.id));
+        })
+        .catch((err) => {
+          const typedError = err as AxiosError;
+          alert(`Error: ${typedError.message}`);
+        });
+    }
   };
 
   const handleNumberChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +106,7 @@ const App = () => {
         number={newNumber}
       />
       <h2>Numbers</h2>
-      <Persons filter={filter} persons={persons} />
+      <Persons filter={filter} persons={persons} onDelete={handleDelete} />
       <div>debug: {newName}</div>
     </div>
   );
