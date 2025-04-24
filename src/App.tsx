@@ -46,7 +46,6 @@ const App = () => {
     setPersons(persons.concat(newPerson));
     setNewName('');
     setNewNumber('');
-    console.log(persons);
   };
 
   const handleNumberChange = (e: ChangeEvent<HTMLInputElement>) => {
