@@ -3,6 +3,7 @@ import Filter from './components/Filter';
 import PersonForm from './components/PersonForm';
 import Persons from './components/Persons';
 import personsApi from './persons.api';
+import Notification from './components/Notification';
 import { AxiosError } from 'axios';
 
 export interface TPerson {
@@ -16,6 +17,10 @@ const App = () => {
   const [newName, setNewName] = useState('');
   const [newNumber, setNewNumber] = useState('');
   const [filter, setFilter] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     personsApi.getAll().then((personsData) => {
@@ -54,6 +59,11 @@ const App = () => {
           setPersons(
             persons.map((p) => (p.id === person?.id ? updatedPerson : p))
           );
+
+          setNotificationMessage(`Person updated`);
+          setTimeout(() => {
+            setNotificationMessage(null);
+          }, 5000);
         });
       }
       return;
@@ -63,6 +73,11 @@ const App = () => {
       setPersons(persons.concat(responseData));
       setNewName('');
       setNewNumber('');
+
+      setNotificationMessage(`New person created`);
+      setTimeout(() => {
+        setNotificationMessage(null);
+      }, 5000);
     });
   };
 
@@ -78,7 +93,10 @@ const App = () => {
         })
         .catch((err) => {
           const typedError = err as AxiosError;
-          alert(`Error: ${typedError.message}`);
+          setErrorMessage(`Error: ${typedError.message}`);
+          setTimeout(() => {
+            setErrorMessage(null);
+          }, 5000);
         });
     }
   };
@@ -96,6 +114,8 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={errorMessage} type="error" />
+      <Notification message={notificationMessage} type="success" />
 
       <Filter value={filter} onChange={handleFilterChange} />
       <PersonForm
